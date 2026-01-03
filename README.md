@@ -12,9 +12,9 @@ Die Verwaltung erfolgt über eine **Ingame-Einstellungsseite**, die vom Loader b
 
 Das Repository ist bewusst in zwei Bereiche aufgeteilt:
 
-/scripts/
-├─ own/ # Eigene Skripte
-└─ mirrored/ # Gespiegelte Skripte von Drittanbietern
+**/scripts/**
+- `own/` – Eigene Skripte  
+- `mirrored/` – Gespiegelte Skripte von Drittanbietern
 
 
 ### Eigene Skripte (`/scripts/own`)
