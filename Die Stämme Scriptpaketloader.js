@@ -6,6 +6,7 @@
 // @match        https://*.die-staemme.de/game.php?*
 // @match        https://*.tribalwars.*/*game.php?*
 // @match        https://ds-ultimate.de/tools/*
+// @author       Marcel Wollbaum
 // @run-at       document-end
 // @grant        GM_xmlhttpRequest
 // @grant        GM.getValue
@@ -34,7 +35,7 @@
       group: "Tabelle 1",
       name: "Inc DC Reminder via Webhook",
       description: "Erinnert / meldet Inc/DC (Webhook).",
-      url: "https://raw.githubusercontent.com/Marcel2511/Inc-DC-Reminder-Script/main/Inc%20DC%20Reminder%20via%20Webhook-1.0.user.js",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/refs/heads/main/own/incdcreminder.js",
       defaultEnabled: false,
       matches: [],
       excludes: ["*screen=settings*"],
@@ -62,7 +63,7 @@
       group: "Tabelle 1",
       name: "Tribal Wars Mass Rekru",
       description: "Massenrekrutierung (train/mass + train/success&action=train_mass).",
-      url: "https://raw.githubusercontent.com/Marcel2511/Tribal-Wars-Mass-Rekru-Script/main/massrekru.user.js",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/reafs/heads/own/massrekru.user.js",
       defaultEnabled: false,
       matches: [
         "game.php*screen=train&mode=mass*",
@@ -78,7 +79,7 @@
       group: "Tabelle 2",
       name: "DS-Ultimate AttackPlanner Helper (Beispiel)",
       description: "Hilfsscript für DS-Ultimate AttackPlanner.",
-      url: "https://raw.githubusercontent.com/DEINNAME/DEINREPO/main/dein_attackplanner_script.user.js",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/refs/heads/main/own/dsutokumin.js",
       defaultEnabled: false,
       matches: ["*ds-ultimate.de/tools/attackPlanner/*"],
       excludes: [],
