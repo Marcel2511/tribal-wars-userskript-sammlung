@@ -16,6 +16,8 @@
 // @grant        GM_setValue
 // @connect      raw.githubusercontent.com
 // @connect      github.com
+// @connect media.innogamescdn.com
+
 // ==/UserScript==
 
 (() => {
@@ -120,6 +122,27 @@
       matches: ["*ds-ultimate.de/tools/attackPlanner/*"],
       excludes: [],
     },
+    {
+      id: "TKKs / Marcels Buildbot",
+      group: "Tabelle 2",
+      name: "Buildbot",
+      description: "Baubot für DS mit verbessertem Questhandling",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/refs/heads/main/own/advancedtkkbuildbot.js",
+      defaultEnabled: false,
+      matches: ["game.php*screen=train&mode=main*"],
+      excludes: [],
+    },
+    {
+      id: "2-Klick Gruppenwechsel",
+      group: "Tabelle 2",
+      name: "2-Klick Gruppenwechsel",
+      description: "2-Klick Gruppenwechsel",
+      url: "https://media.innogamescdn.com/com_DS_DE/Scriptdatenbank/userscript/700.user.js",
+      defaultEnabled: false,
+      matches: ["game.php*screen=train&mode=main*"],
+      excludes: [],
+    },
+
   ];
 
   const GROUPS = ["Tabelle 1", "Tabelle 2"];
