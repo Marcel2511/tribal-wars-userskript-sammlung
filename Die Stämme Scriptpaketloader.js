@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Die Stämme Scriptpaket Loader + Settings-Seite (Gruppen/Tabellen + optionale Infos)
 // @namespace    https://github.com/Marcel2511
-// @version      0.8.2
+// @version      0.8.5
 // @description  Lädt mehrere Userscripts als „Paket“. Auswahl über Ingame-Settings-Seite (screen=settings&mode=scriptpack). Module werden in Gruppen (Tabellen) dargestellt; „Mehr Infos“ erscheint nur, wenn info vorhanden ist.
 // @match        https://*.die-staemme.de/game.php?*
 // @match        https://*.tribalwars.*/*game.php?*
@@ -14,21 +14,26 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_deleteValue
+// @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
 // @connect      github.com
-// @connect media.innogamescdn.com
-
+// @connect      media.innogamescdn.com
+// @connect      userscripts-mirror.org
 // ==/UserScript==
 
 (() => {
   "use strict";
 
   // ---------------------------------------------------------------------------
-  // Compatibility Layer (wichtig: als echte Identifier im Loader-Scope)
+  // Compatibility Layer (Legacy GM_* + unsafeWindow)
+  // Ziel: Alte Scripts/Libraries erwarten "GM_getValue(...)" als freien Identifier.
+  // Lösung: Wir stellen Fallback-Implementierungen bereit und injizieren diese
+  // zusätzlich als Parameter beim Ausführen der Module.
   // ---------------------------------------------------------------------------
 
-  // 1) GM_addStyle bereitstellen (Identifier!), damit Module es sicher finden.
-  //    Falls Tampermonkey GM_addStyle liefert -> nutzen. Sonst Fallback.
+  const __LS_PREFIX__ = "__twpack_";
+
   // eslint-disable-next-line no-var
   var GM_addStyle =
     (typeof GM_addStyle !== "undefined" && GM_addStyle) ||
@@ -41,13 +46,12 @@
           return style;
         });
 
-  // Optional: Old GM_getValue / GM_setValue Bridge (nur falls Module das nutzen)
   // eslint-disable-next-line no-var
   var GM_getValue =
     (typeof GM_getValue !== "undefined" && GM_getValue) ||
     ((key, def) => {
       try {
-        const v = localStorage.getItem("__twpack_" + key);
+        const v = localStorage.getItem(__LS_PREFIX__ + key);
         return v === null ? def : JSON.parse(v);
       } catch {
         return def;
@@ -59,11 +63,46 @@
     (typeof GM_setValue !== "undefined" && GM_setValue) ||
     ((key, value) => {
       try {
-        localStorage.setItem("__twpack_" + key, JSON.stringify(value));
+        localStorage.setItem(__LS_PREFIX__ + key, JSON.stringify(value));
       } catch {
         // ignore
       }
     });
+
+  // eslint-disable-next-line no-var
+  var GM_deleteValue =
+    (typeof GM_deleteValue !== "undefined" && GM_deleteValue) ||
+    ((key) => {
+      try {
+        localStorage.removeItem(__LS_PREFIX__ + key);
+      } catch {
+        // ignore
+      }
+    });
+
+  // eslint-disable-next-line no-var
+  var unsafeWindow =
+    (typeof unsafeWindow !== "undefined" && unsafeWindow) ||
+    (typeof globalThis.unsafeWindow !== "undefined" && globalThis.unsafeWindow) ||
+    window;
+
+  // Optional: auch als property anbieten (hilft einigen Scripts)
+  try {
+    globalThis.unsafeWindow = unsafeWindow;
+    window.unsafeWindow = unsafeWindow;
+
+    globalThis.GM_addStyle = GM_addStyle;
+    window.GM_addStyle = GM_addStyle;
+
+    globalThis.GM_getValue = GM_getValue;
+    window.GM_getValue = GM_getValue;
+
+    globalThis.GM_setValue = GM_setValue;
+    window.GM_setValue = GM_setValue;
+
+    globalThis.GM_deleteValue = GM_deleteValue;
+    window.GM_deleteValue = GM_deleteValue;
+  } catch (_) {}
 
   // --------- Konfiguration ---------
   const PREF_KEY = "tw_pack_prefs_v8";
@@ -123,14 +162,15 @@
       excludes: [],
     },
     {
-      id: "TKKs_Marcels Buildbot",
+      id: "tkk_buildbot",
       group: "Tabelle 2",
-      name: "Buildbot",
+      name: "TKKs / Marcels Buildbot",
       description: "Baubot für DS mit verbessertem Questhandling",
-      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/refs/heads/main/own/advancedtkkbuildbot.js",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/main/own/advancedtkkbuildbot.js",
       defaultEnabled: false,
-      matches: ["game.php*screen=main*"],
-      excludes: [],
+      matches: ["*game.php*screen=main*"],
+      excludes: ["*screen=settings*"],
+      requires: ["https://userscripts-mirror.org/scripts/source/107941.user.js"],
     },
     {
       id: "2-Klick_Gruppenwechsel",
@@ -142,7 +182,6 @@
       matches: [],
       excludes: [],
     },
-
   ];
 
   const GROUPS = ["Tabelle 1", "Tabelle 2"];
@@ -188,10 +227,32 @@
     });
   }
 
-  // WICHTIG: direktes eval, damit Module Identifier aus dem Loader-Scope sehen (z.B. GM_addStyle).
+  /**
+   * Ausführen mit "Injected Locals":
+   * Viele Greasemonkey-Libraries erwarten GM_getValue/GM_setValue als freie Identifier.
+   * new Function(...) läuft global -> sieht nicht deine IIFE-vars.
+   * Daher: wir geben die APIs als Parameter rein.
+   */
   function safeEval(code, moduleName) {
     try {
-      eval(code); // bewusst direkt
+      const fn = new Function(
+        "GM_getValue",
+        "GM_setValue",
+        "GM_deleteValue",
+        "GM_addStyle",
+        "unsafeWindow",
+        code
+      );
+
+      fn.call(
+        unsafeWindow,
+        GM_getValue,
+        GM_setValue,
+        GM_deleteValue,
+        GM_addStyle,
+        unsafeWindow
+      );
+
       console.info(`[TW-Pack] geladen: ${moduleName}`);
     } catch (e) {
       console.error(`[TW-Pack] Fehler in Modul: ${moduleName}`, e);
@@ -227,7 +288,7 @@
     return typeof module.info === "string" && module.info.trim().length > 0;
   }
 
-  // --------- Storage ---------
+  // --------- Storage (Loader-eigene Settings)
   async function loadPrefs() {
     const saved = await GM.getValue(PREF_KEY, null);
     if (saved && typeof saved === "object" && saved.modules) return saved;
@@ -437,6 +498,7 @@
     target.appendChild(wrap);
   }
 
+  // --------- Main ---------
   async function run() {
     injectMenuEntryIfPresent();
 
@@ -458,6 +520,15 @@
       if (!moduleMatchesUrl(m, location.href)) continue;
 
       try {
+        // Dependencies zuerst laden
+        if (Array.isArray(m.requires)) {
+          for (const depUrl of m.requires) {
+            const depCode = await httpGet(cacheBust(depUrl));
+            safeEval(depCode, `${m.name} (dependency)`);
+          }
+        }
+
+        // Hauptmodul laden
         const code = await httpGet(cacheBust(m.url));
         safeEval(code, m.name);
       } catch (e) {
