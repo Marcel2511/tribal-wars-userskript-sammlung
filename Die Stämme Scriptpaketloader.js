@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Die Stämme Scriptpaket Loader + Settings-Seite (Gruppen/Tabellen + optionale Infos)
 // @namespace    https://github.com/Marcel2511
-// @version      0.8.0
+// @version      0.8.2
 // @description  Lädt mehrere Userscripts als „Paket“. Auswahl über Ingame-Settings-Seite (screen=settings&mode=scriptpack). Module werden in Gruppen (Tabellen) dargestellt; „Mehr Infos“ erscheint nur, wenn info vorhanden ist.
 // @match        https://*.die-staemme.de/game.php?*
 // @match        https://*.tribalwars.*/*game.php?*
@@ -12,6 +12,8 @@
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @connect      raw.githubusercontent.com
 // @connect      github.com
 // ==/UserScript==
@@ -19,17 +21,53 @@
 (() => {
   "use strict";
 
+  // ---------------------------------------------------------------------------
+  // Compatibility Layer (wichtig: als echte Identifier im Loader-Scope)
+  // ---------------------------------------------------------------------------
+
+  // 1) GM_addStyle bereitstellen (Identifier!), damit Module es sicher finden.
+  //    Falls Tampermonkey GM_addStyle liefert -> nutzen. Sonst Fallback.
+  // eslint-disable-next-line no-var
+  var GM_addStyle =
+    (typeof GM_addStyle !== "undefined" && GM_addStyle) ||
+    ((typeof GM !== "undefined" && typeof GM.addStyle === "function")
+      ? (css) => GM.addStyle(css)
+      : (css) => {
+          const style = document.createElement("style");
+          style.textContent = String(css ?? "");
+          (document.head || document.documentElement).appendChild(style);
+          return style;
+        });
+
+  // Optional: Old GM_getValue / GM_setValue Bridge (nur falls Module das nutzen)
+  // eslint-disable-next-line no-var
+  var GM_getValue =
+    (typeof GM_getValue !== "undefined" && GM_getValue) ||
+    ((key, def) => {
+      try {
+        const v = localStorage.getItem("__twpack_" + key);
+        return v === null ? def : JSON.parse(v);
+      } catch {
+        return def;
+      }
+    });
+
+  // eslint-disable-next-line no-var
+  var GM_setValue =
+    (typeof GM_setValue !== "undefined" && GM_setValue) ||
+    ((key, value) => {
+      try {
+        localStorage.setItem("__twpack_" + key, JSON.stringify(value));
+      } catch {
+        // ignore
+      }
+    });
+
   // --------- Konfiguration ---------
   const PREF_KEY = "tw_pack_prefs_v8";
   const SETTINGS_SCREEN = "settings";
   const PACK_MODE = "scriptpack";
 
-  /**
-   * Pro Modul:
-   * - group: bestimmt, in welcher Tabelle es angezeigt wird (z.B. "Tabelle 1", "Tabelle 2")
-   * - info: optional. Nur wenn vorhanden, wird „Mehr Infos anzeigen“ gerendert.
-   * - matches/excludes: @match-ähnliche Patterns (mit '*' Wildcard). Leer => überall (außer settings), innerhalb der Loader-@match Domains.
-   */
   const MODULES = [
     {
       id: "inc_dc_reminder",
@@ -64,17 +102,14 @@
       group: "Tabelle 1",
       name: "Tribal Wars Mass Rekru",
       description: "Massenrekrutierung (train/mass + train/success&action=train_mass).",
-      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/reafs/heads/own/massrekru.user.js",
+      url: "https://raw.githubusercontent.com/Marcel2511/tribal-wars-userskript-sammlung/refs/heads/main/own/massrekru.user.js",
       defaultEnabled: false,
       matches: [
         "game.php*screen=train&mode=mass*",
         "game.php*screen=train&mode=success&action=train_mass*",
       ],
       excludes: ["*screen=settings*"],
-      // kein info => kein „Mehr Infos anzeigen“
     },
-
-    // Beispiel-Platzhalter (du setzt url/matches später korrekt)
     {
       id: "dsu_attackplanner",
       group: "Tabelle 2",
@@ -84,11 +119,9 @@
       defaultEnabled: false,
       matches: ["*ds-ultimate.de/tools/attackPlanner/*"],
       excludes: [],
-      // info optional
     },
   ];
 
-  // Gruppen-Reihenfolge (identische Tabellenstruktur pro Gruppe)
   const GROUPS = ["Tabelle 1", "Tabelle 2"];
 
   // --------- Utilities ---------
@@ -132,9 +165,10 @@
     });
   }
 
+  // WICHTIG: direktes eval, damit Module Identifier aus dem Loader-Scope sehen (z.B. GM_addStyle).
   function safeEval(code, moduleName) {
     try {
-      (0, eval)(code);
+      eval(code); // bewusst direkt
       console.info(`[TW-Pack] geladen: ${moduleName}`);
     } catch (e) {
       console.error(`[TW-Pack] Fehler in Modul: ${moduleName}`, e);
@@ -142,7 +176,6 @@
     }
   }
 
-  // '*' Wildcard matcher: prüft, ob alle Teilstücke in Reihenfolge vorkommen
   function wildcardIncludes(href, pattern) {
     const parts = String(pattern).split("*");
     let pos = 0;
@@ -188,36 +221,33 @@
     await GM.setValue(PREF_KEY, prefs);
   }
 
-    // --------- Settings sidebar menu injection (nur Ingame) ---------
-    function injectMenuEntryIfPresent() {
-        // Nur im echten Settings-Screen die linke Modemenu anfassen.
-        const screen = getParam("screen");
-        if (screen !== "settings") return;
+  function injectMenuEntryIfPresent() {
+    const screen = getParam("screen");
+    if (screen !== SETTINGS_SCREEN) return;
 
-        const menu = document.querySelector("table.vis.modemenu tbody");
-        if (!menu) return;
-        if (menu.querySelector('a[data-tw-pack="1"]')) return;
+    const menu = document.querySelector("table.vis.modemenu tbody");
+    if (!menu) return;
+    if (menu.querySelector('a[data-tw-pack="1"]')) return;
 
-        const isSelected = getParam("mode") === "scriptpack";
+    const isSelected = getParam("mode") === PACK_MODE;
 
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.style.minWidth = "80px";
-        if (isSelected) td.classList.add("selected");
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.style.minWidth = "80px";
+    if (isSelected) td.classList.add("selected");
 
-        const a = document.createElement("a");
-        a.href = buildPackSettingsUrl();
-        a.textContent = "Scriptpaket";
-        a.setAttribute("data-tw-pack", "1");
+    const a = document.createElement("a");
+    a.href = buildPackSettingsUrl();
+    a.textContent = "Scriptpaket";
+    a.setAttribute("data-tw-pack", "1");
 
-        td.appendChild(a);
-        tr.appendChild(td);
+    td.appendChild(a);
+    tr.appendChild(td);
 
-        const selectedRow = menu.querySelector("tr td.selected")?.parentElement;
-        if (selectedRow && selectedRow.parentElement === menu) selectedRow.insertAdjacentElement("afterend", tr);
-        else menu.appendChild(tr);
-    }
-
+    const selectedRow = menu.querySelector("tr td.selected")?.parentElement;
+    if (selectedRow && selectedRow.parentElement === menu) selectedRow.insertAdjacentElement("afterend", tr);
+    else menu.appendChild(tr);
+  }
 
   function findTarget() {
     return (
@@ -228,7 +258,6 @@
     );
   }
 
-  // --------- UI helpers ---------
   function createModulesTable(modulesInGroup, prefs) {
     const table = document.createElement("table");
     table.className = "vis";
@@ -247,7 +276,6 @@
 
     for (const m of modulesInGroup) {
       const state = prefs.modules?.[m.id] ?? { enabled: false };
-
       const tr = document.createElement("tr");
 
       const tdEnabled = document.createElement("td");
@@ -288,7 +316,6 @@
       tr.appendChild(tdEnabled);
       tr.appendChild(tdName);
       tr.appendChild(tdDesc);
-
       tbody.appendChild(tr);
     }
 
@@ -296,7 +323,6 @@
     return table;
   }
 
-  // --------- Settings page UI ---------
   function renderPackSettingsPage(prefs) {
     const target = findTarget();
 
@@ -319,22 +345,17 @@
     wrap.appendChild(title);
     wrap.appendChild(info);
 
-    // Gruppen rendern
     for (const groupName of GROUPS) {
-      const groupModules = MODULES.filter(m => (m.group || "Tabelle 1") === groupName);
+      const groupModules = MODULES.filter((m) => (m.group || "Tabelle 1") === groupName);
 
       const h3 = document.createElement("h3");
       h3.textContent = groupName;
       h3.style.marginTop = "14px";
 
-      // Wenn Gruppe leer ist, trotzdem anzeigen (du wolltest identisch aufgebaut)
-      const table = createModulesTable(groupModules, prefs);
-
       wrap.appendChild(h3);
-      wrap.appendChild(table);
+      wrap.appendChild(createModulesTable(groupModules, prefs));
     }
 
-    // Actions (global)
     const actions = document.createElement("div");
     actions.style.marginTop = "12px";
     actions.style.display = "flex";
@@ -390,11 +411,9 @@
     actions.appendChild(hint);
 
     wrap.appendChild(actions);
-
     target.appendChild(wrap);
   }
 
-  // --------- Main ---------
   async function run() {
     injectMenuEntryIfPresent();
 
@@ -407,7 +426,6 @@
       return;
     }
 
-    // In settings generell nichts laden (verhindert UI-Konflikte)
     if (screen === SETTINGS_SCREEN) return;
 
     for (const m of MODULES) {
