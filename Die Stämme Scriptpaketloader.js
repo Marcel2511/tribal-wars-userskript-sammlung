@@ -11,6 +11,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM.getValue
 // @grant        GM.setValue
+// @grant        GM_addStyle
 // @connect      raw.githubusercontent.com
 // @connect      github.com
 // ==/UserScript==
