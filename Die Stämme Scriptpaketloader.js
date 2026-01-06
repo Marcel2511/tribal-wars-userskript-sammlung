@@ -182,6 +182,18 @@
       matches: [],
       excludes: [],
     },
+    {
+      id: "Kuminsabschickbot",
+      group: "Tabelle 2",
+      name: "Kuminsabschickbot",
+      description: "Kuminsabschickbot - Discord @imkumin",
+      url: "https://gistcdn.githack.com/ImKumin/fee6950e8236760a35d8447586235f78/raw/Kumin%2520Mint%2520Loader%2520T.js",
+      defaultEnabled: false,
+      matches: [],
+      excludes: [],
+    },
+
+    
   ];
 
   const GROUPS = ["Tabelle 1", "Tabelle 2"];
