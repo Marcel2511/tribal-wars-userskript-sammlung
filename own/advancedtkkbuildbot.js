@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         [TKK/Marcel Wollbaum] Build Bot - TKKs Buildbot now with Quest and Reward Collection
+// @name         [TKK] Build Bot (Quest/Reward Patch + Debug + Human-Speed)
 // @namespace    https://tikaykhan.net/
-// @version      2.0.0
-// @author       Marcel Wollbaum based on TiKayKhan Buildbot
+// @version      1.3.6-debug-human-popfarm-lock-ui
+// @author       TiKayKhan + Patch
 // @downloadURL  https://tikaykhan.net/tw/build.user.js
 // @include      https://*.die-staemme.de/game.php?*
 // @require      https://userscripts-mirror.org/scripts/source/107941.user.js
@@ -77,42 +77,238 @@
             { name: 'watchtower', image: '3', title: 'Wachturm', levels: 20 }, // 17
           ];
 
-          let count = 5;
-          let selected = GM_getValue('tkk.build.selectedTemplate.' + game.world + '.' + game.village.id) || 1;
+          // === 8 Quick-Templates (Buttons 1..8) ===
+          const tkkPresetTemplates = {
+            1: ["5","4","6","1","0","3","2","1","0","2","1","0","2","5","5","4","4","12","2","2","1","0","2","1","3","3","3","4","0","2","4","1","0","1","4","0","12","12","12","12","5","1","5","0","3","1","5","0","4","3","2","1","3","0","5","4","4","0","3","1","0","1","5","2","5","0","4","1","3","5","2","1","0","4","2","4","4","5","0","1","2","4","5","5","1","0","2","4","3","3","3","3","3","5","5","2","1","0","5","2","5","5","4","3","2","5","1","0","4","5","1","0","4","5","4","2","1","0","3","4","1","0","2","3","4","5","1","0","2","3","4","1","0","5","2","3","5","4","1","0","5","2","4","4","2","3","2","3","2","3","8","8","8","8","8","8","9","9","9","9","9","8","8","10","10","10","10","8","8","11","11","11","8","8","8","8","8","8","8","8","8","8","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-","-"],
+            2: ["5","0","1","2","3","4","5","0","1","2","3","4","5","0","1","2","3","4","5","0","1","2","3","4","5","0","1","2","3","4","9","12","12","13","5","0","1","2","4","13","12","5","0","1","2","13","4","12","5","0","1","2","4","13","12","5","0","1","2","4","5","0","1","2","4","0","1","0","1","5","13","4","12","0","1","2","0","1","5","4","12","2","0","1","9","9","9","9","13","8","8","8","8","8","10","10","10","0","1","2","5","4","12","0","1","2","0","1","2","5","4","12","0","1","2","5","4","12","1","0","2","5","4","0","1","2","5","4","0","1","2","5","4","0","1","2","5","4","0","1","2","5","4","0","1","2","0","1","2","4","0","1","2","2","2","2","-","-","-","-"],
+            3: ["2","1","0","1","0","1","0","2","1","0","2","1","0","2","1","0","2","1","0","5","5","5","5","5","4","4","4","2","1","0","2","1","0","2","1","9","9","9","9","9","0","2","1","0","2","1","0","4","4","4","5","5","5","5","5","12","12","12","12","12","4","4","4","4","4","8","8","8","8","8","3","3","3","3","3","2","1","0","2","1","0","5","5","4","4","3","3","2","1","0","4","2","1","0","5","0","4","1","1","3","4","5","0","0","1","1","0","5","2","1","0","2","4","5","2","2","1","5","5","5","5","0","9","9","9","9","4","4","4","8","8","8","8","8","10","10","10","9","2","1","0","4","5","4","5","5","5","4","5","4","3","3","3","13","13","13","13","13","3","3","3","3","2","1","0","2","1","0","2","1","0","2","1","0","9","9","9","9","10","10","4","9","2","1","0","2","0","2","2","1","8","8","8","8","8","11","11","4","4","4","8","8","8","8","8","8","8","8","8","8","12","12","12","12","12","15","13","13","13","13","13","10","10","10","0","2","1","0","9","9","9","9","9","1","2","0","1","2","9","9","9","9","9"],
+            4: ['13', '13', '13', '13', '13', '13', '13','13','13','13'],
+            5: ['13', '13', '13', '13', '13', '13', '13','13','13','13','13','13','13','13','13'],
+            6: ['13', '13', '13', '13', '13', '13', '13','13','13','13','13', '13', '13', '13', '13', '13', '13','13','13','13'],
+            7: ["5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","9","9","9","9","9","8","8","8","8","8","8","8","12","12","12","12","12","12","12","12","12","12","8","8","8","8","8","8","8","8","8","8","8","8","8","15"],
+            8: ["5","5","5","5","5","9","9","9","9","8","8","8","8","8","9","5","5","5","5","5","9","10","10","10","9","9","9","9","10","10","8","8","8","9","10","8","8","9","10","11","11","11","11","11","9","9","10","9","10","10","9","10","9","10","9","10","11","11","11","9","9","10","10","9","9","9","10","10","9","9","10","10","10"],
+          };
+
+          // === Button labels (hier umbenennen) ===
+          const tkkPresetButtonLabels = {
+            1: 'Standard 1',
+            2: 'Standard 2',
+            3: 'Standard 3',
+            4: 'Wall 10',
+            5: 'Wall 15',
+            6: 'Wall 20',
+            7: 'Ah Push',
+            8: 'Truppen Push',
+          };
+
+          let count = 8;
+          let selected =
+            GM_getValue('tkk.build.selectedTemplate.' + game.world + '.' + game.village.id) || 1;
           if (selected > count) selected = 1;
 
-          let fallback = ["2","1","0","2","1","0","2","1","0","2","1","0","2","1","0","2",
-            "1","0","2","1","0","2","1","0","2","1","0","2","1","0","5","5","5","5","5","4"
-            ,"4","4","4","4","3","3","3","3","3","2","1","0","2","1","0","5","5","4","4","3"
-            ,"3","2","1","0","4","2","1","0","5","0","12","12","12","12","12","4","1","1",
-            "3","4","5","0","0","1","1","0","5","2","1","0","2","4","5","2","2","1","5","5"
-            ,"5","5","8","8","8","8","8","0","9","9","9","9","9","4","4","4","10","10","10",
-            "2","1","0","4","5","4","5","5","5","4","5","4","3","3","3","13","13","13","13",
-            "13","3","3","3","3","2","1","0","2","1","0","2","5","5","1","0","2","1","0","9",
-            "9","9","9","10","10","4","9","2","1","0","2","0","2","2","1","8","8","8","8","8",
-            "11","11","4","4","4","8","8","8","8","8","8","8","8","8","8","12","12","12","12",
-            "12","15","13","13","13","13","13","10","10","10","0","2","1","0","9","9","9","9",
-            "9","1","2","0","1","2","9","9","9","9","9"
-        ];
+          let fallback = [
+            '2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0',
+            '5','5','5','5','5','4','4','4','4','4','3','3','3','3','3','2','1','0','2','1','0','5','5','4','4','3','3','2','1','0',
+            '4','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','3','2','1','0','2','1','0','2','1','0',
+            '2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2','1','0','2'
+          ];
 
-          let queue = JSON.parse(GM_getValue('tkk.build.buildQueue.' + game.world + '.' + selected) || null) || fallback;
+          let queue =
+            JSON.parse(GM_getValue('tkk.build.buildQueue.' + game.world + '.' + selected) || null) ||
+            fallback;
 
-          let colors = { default: '', built: '#5a09', building: '#5af9', unbuildable: '#aaa9', error: '#a009' };
-          let state = GM_getValue('tkk.build.queueState.' + game.world + '.' + game.player.id) || 'minus';
+          let colors = {
+            default: '',
+            built: '#5a09',
+            building: '#5af9',
+            unbuildable: '#aaa9',
+            error: '#a009',
+          };
+          let state =
+            GM_getValue('tkk.build.queueState.' + game.world + '.' + game.player.id) || 'minus';
           let quests = GM_getValue('tkk.build.doQuests.' + game.world + '.' + game.player.id) || false;
+
+          // === Farm-Lock Einstellungen (neu) ===
+          const tkkFarmLockEnabledKey = 'tkk.build.farmLock.enabled.' + game.world + '.' + game.player.id;
+          const tkkFarmLockThresholdKey = 'tkk.build.farmLock.threshold.' + game.world + '.' + game.player.id;
+
+          let tkkFarmLockEnabled = GM_getValue(tkkFarmLockEnabledKey);
+          if (typeof tkkFarmLockEnabled !== 'boolean') tkkFarmLockEnabled = true; // Default: aktiv
+
+          let tkkFarmLockThresholdPct = parseFloat(GM_getValue(tkkFarmLockThresholdKey));
+          if (!isFinite(tkkFarmLockThresholdPct) || tkkFarmLockThresholdPct <= 0 || tkkFarmLockThresholdPct >= 100) {
+            tkkFarmLockThresholdPct = 10; // Default: 10%
+          }
 
           let columns = 20;
           let rerun = 5;
           let wait = true;
           let disable = false;
 
+          // Start/Stop Toggle State
+          let tkkRunning = false;
+          let tkkRunTimer = null;
+
+          const tkkSetStartButtonUi = () => {
+            const $btn = $('input#tkk-start');
+            if (!$btn.length) return;
+            $btn.prop('disabled', false);
+            $btn.val(tkkRunning ? 'Stoppen' : 'Starten');
+          };
+
+          const tkkStop = () => {
+            tkkRunning = false;
+            disable = false;
+            if (tkkRunTimer) {
+              try { clearTimeout(tkkRunTimer); } catch (e) {}
+              tkkRunTimer = null;
+            }
+            tkkSetStartButtonUi();
+          };
+
+          const tkkStart = () => {
+            if (!check()) {
+              tkkRunning = false;
+              tkkSetStartButtonUi();
+              return;
+            }
+            tkkRunning = true;
+            disable = true;
+            tkkSetStartButtonUi();
+            run();
+          };
+
+          // ===== Pop-Logic (Farm Lock + UI) =====
+          const tkkGetPopStats = () => {
+            const curTxt = ($('#pop_current_label').text() || '').trim();
+            const maxTxt = ($('#pop_max_label').text() || '').trim();
+
+            const current = parseInt(curTxt.replace(/[^\d]/g, ''), 10);
+            const max = parseInt(maxTxt.replace(/[^\d]/g, ''), 10);
+            if (!isFinite(current) || !isFinite(max) || max <= 0) return null;
+
+            const free = Math.max(0, max - current);
+            const freeRatio = free / max; // 0..1
+            return { current, max, free, freeRatio };
+          };
+
+          const tkkGetFarmThresholdRatio = () => {
+            let v = parseFloat($('#tkk-farmthreshold').val());
+            if (!isFinite(v)) v = tkkFarmLockThresholdPct;
+            v = Math.max(1, Math.min(99, v));
+            return v / 100;
+          };
+
+          const tkkIsLowPop = () => {
+            if (!tkkFarmLockEnabled) return false;
+            const stats = tkkGetPopStats();
+            if (!stats) return false;
+            const thr = tkkGetFarmThresholdRatio();
+            return stats.freeRatio < thr;
+          };
+
+          const tkkFarmPriorityStep = () => {
+            // Wenn Farm bereits in der Bauqueue ist => warten
+            if ($('tr.buildorder_farm').length) return false;
+
+            const cur = parseInt(game.village.buildings.farm || '0', 10) || 0;
+            const nextLevel = cur + 1;
+
+            const $farmLink = $('a#main_buildlink_farm_' + nextLevel);
+
+            // Wenn klickbar/visible => klicken
+            if ($farmLink.length && $farmLink.filter(':visible').length) {
+              $farmLink.mousedown().click().mouseup();
+              return true;
+            }
+
+            // Falls unmet -> warten
+            const $unmetLink = $('table#buildings_unmet a[href$="farm"]');
+            if (wait && $unmetLink.length) return false;
+
+            // Sonst: Hard-Lock = ebenfalls warten
+            return false;
+          };
+
+          const tkkEnsureFarmLockUi = () => {
+            if ($('#tkk-farmlockwrap').length) return;
+            const $start = $('input#tkk-start');
+            if (!$start.length) return;
+
+            const checked = tkkFarmLockEnabled ? ' checked' : '';
+            const val = (isFinite(tkkFarmLockThresholdPct) ? tkkFarmLockThresholdPct : 10);
+
+            const html =
+              '<span id="tkk-farmlockwrap" style="margin-left: 10px; white-space: nowrap;">' +
+                '<label style="margin-right: 6px;">' +
+                  '<input type="checkbox" id="tkk-farmforce"' + checked + ' style="vertical-align: -2px; margin-right: 4px;"/>' +
+                  'Farm erzwingen' +
+                '</label>' +
+                '<input type="number" id="tkk-farmthreshold" min="1" max="99" step="0.1" value="' + val + '" ' +
+                  'style="width: 55px; margin-right: 4px;"/>' +
+                '<span>%</span>' +
+              '</span>';
+
+            $start.after($(html));
+          };
+
+          const tkkEnsurePopUi = () => {
+            const $start = $('input#tkk-start');
+            if (!$start.length) return;
+            if ($('#tkk-popfree').length) return;
+
+            const $span = $(
+              '<span id="tkk-popfree" style="margin-left: 10px; font-weight: bold; vertical-align: middle;">Pop frei: --</span>'
+            );
+            // Pop-Anzeige soll NACH Farm-Lock-UI stehen, wenn vorhanden
+            if ($('#tkk-farmlockwrap').length) $('#tkk-farmlockwrap').after($span);
+            else $start.after($span);
+          };
+
+          const tkkUpdatePopUi = () => {
+            const $el = $('#tkk-popfree');
+            if (!$el.length) return;
+
+            const stats = tkkGetPopStats();
+            if (!stats) {
+              $el.text('Pop frei: --');
+              $el.css('cssText', 'color: inherit !important;');
+              $el.removeAttr('title');
+              return;
+            }
+
+            const pct = Math.round(stats.freeRatio * 1000) / 10; // 1 Nachkommastelle
+            $el.text('        Bauernhof Frei: ' + pct + '%');
+
+            const thrPct = parseFloat($('#tkk-farmthreshold').val());
+            const effectiveThr = isFinite(thrPct) ? thrPct : tkkFarmLockThresholdPct;
+
+            if (tkkFarmLockEnabled && stats.freeRatio < (effectiveThr / 100)) {
+              $el.css('cssText', 'color: red !important;');
+              $el.attr(
+                'title',
+                'Farm-Lock aktiv: freier Pop < ' + effectiveThr + '% (' + stats.free + '/' + stats.max + ')'
+              );
+            } else {
+              $el.css('cssText', 'color: green !important;');
+              $el.attr('title', 'Freier Pop: ' + stats.free + '/' + stats.max);
+            }
+          };
+
           let icon = (code) => {
-            return '<i class="icon building-' + codes[code].name + '" style="height: 16px; vertical-align: -3px;"></i><b>00</b>';
+            return (
+              '<i class="icon building-' +
+              codes[code].name +
+              '" style="height: 16px; vertical-align: -3px;"></i><b>00</b>'
+            );
           };
 
           let element = (code) => {
-            let html = '<td role="tkk-element"' + (isNaN(code) ? '' : ' data-code="' + code + '"') + ' style="text-align: center; white-space: nowrap;">';
-            return html + (isNaN(code) ? ('&#160;').repeat(8) : icon(code)) + '</td>';
+            let html =
+              '<td role="tkk-element"' +
+              (isNaN(code) ? '' : ' data-code="' + code + '"') +
+              ' style="text-align: center; white-space: nowrap;">';
+            return html + (isNaN(code) ? '&#160;'.repeat(8) : icon(code)) + '</td>';
           };
 
           let adjust = (content) => {
@@ -144,8 +340,30 @@
 
           let display = (function display() {
             $('div#tkk-queue').remove();
-            let html = '<div id="tkk-queue"><br/><table class="vis" style="width: 100%;"><tr><th colspan="' + columns + '">';
-            html += '<img id="tkk-toggle" src="graphic/' + state + '.png" style="vertical-align: -4px;"/>[TKK] Build Bot';
+
+            // Buttons above the table
+            let presetHtml = '<div id="tkk-presets" style="margin: 6px 0; text-align: center;">';
+            for (let i = 1; i <= 8; i++) {
+              const label = tkkPresetButtonLabels[i] || 'Preset ' + i;
+              presetHtml +=
+                '<input type="button" class="btn tkk-preset" data-preset="' +
+                i +
+                '" value="' +
+                label +
+                '" style="margin: 0 3px;"/>';
+            }
+            presetHtml += '</div>';
+
+            let html =
+              '<div id="tkk-queue">' +
+              presetHtml +
+              '<br/><table class="vis" style="width: 100%;"><tr><th colspan="' +
+              columns +
+              '">';
+            html +=
+              '<img id="tkk-toggle" src="graphic/' +
+              state +
+              '.png" style="vertical-align: -4px;"/>[TKK] Build Bot';
             html += '</th></tr><tr role="tkk-row"' + (state === 'plus' ? ' style="display: none;"' : '') + '>';
 
             if (queue.length) {
@@ -164,15 +382,29 @@
             }
 
             html += '</tr><tr id="tkk-separator"' + (state === 'plus' ? ' style="display: none;"' : '') + '>';
-            html += '<td colspan="' + columns + '" style="text-align: center; background-color: #c1a264;">&#8593; DK: Herausnehmen &#8593; DK + STRG: Entfernen &#8593;</td></tr>';
+            html +=
+              '<td colspan="' +
+              columns +
+              '" style="text-align: center; background-color: #c1a264;">&#8593; DK: Herausnehmen &#8593; DK + STRG: Entfernen &#8593;</td></tr>';
 
             for (let i = 0; i < Math.ceil(codes.length / columns); i++) {
               html += '<tr' + (state === 'plus' ? ' style="display: none;"' : '') + '>';
               for (let ii = 0; ii < columns; ii++) {
                 let code = i * columns + ii;
                 if (codes[code]) {
-                  html += '<td id="tkk-drag-' + code + '" data-code="' + code + '" title="' + codes[code].title + '" style="text-align: center;" draggable="true">';
-                  html += '<img src="https://dsde.innogamescdn.com/asset/f1821a7a/graphic/buildings/mid/' + codes[code].name + codes[code].image + '.png" style="max-width: 25px; max-height: 25px;"/></td>';
+                  html +=
+                    '<td id="tkk-drag-' +
+                    code +
+                    '" data-code="' +
+                    code +
+                    '" title="' +
+                    codes[code].title +
+                    '" style="text-align: center;" draggable="true">';
+                  html +=
+                    '<img src="https://dsde.innogamescdn.com/asset/f1821a7a/graphic/buildings/mid/' +
+                    codes[code].name +
+                    codes[code].image +
+                    '.png" style="max-width: 25px; max-height: 25px;"/></td>';
                 } else {
                   html += '<td></td>';
                 }
@@ -181,13 +413,20 @@
             }
 
             html += '</tr><tr' + (state === 'plus' ? ' style="display: none;"' : '') + '>';
-            html += '<td colspan="' + columns + '" style="text-align: center; background-color: #c1a264;">&#8593; DK: Hinzuf&uuml;gen &#8593; D&D: Dazwischenschieben &#8593; D&D + STRG: Ersetzen &#8593;</td></tr><tr>';
+            html +=
+              '<td colspan="' +
+              columns +
+              '" style="text-align: center; background-color: #c1a264;">&#8593; DK: Hinzuf&uuml;gen &#8593; D&D: Dazwischenschieben &#8593; D&D + STRG: Ersetzen &#8593;</td></tr><tr>';
 
-            html += '<td colspan="' + columns + '" style="text-align: center;"><select id="tkk-template" style="margin-right: 3px; vertical-align: 1px;">';
+            html +=
+              '<td colspan="' +
+              columns +
+              '" style="text-align: center;"><select id="tkk-template" style="margin-right: 3px; vertical-align: 1px;">';
             for (let i = 1; i <= count; i++) {
               html += '<option value="' + i + '"' + (selected === i ? ' selected' : '') + '>Vorlage ' + i + '</option>';
             }
-            html += '</select><input type="button" id="tkk-add" value="+" class="btn" style="width: 3%;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
+            html += '</select>';
+            html += '<input type="button" id="tkk-add" value="+" class="btn" style="width: 3%;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
             html += '<input type="button" id="tkk-remove" value="-" class="btn" style="width: 3%;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
             html += '<input type="button" id="tkk-clear" value="X" class="btn" style="width: 3%;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
             html += '<input type="file" id="tkk-file" style="width: 13%; margin-left: 3px; vertical-align: 1px;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
@@ -197,18 +436,49 @@
             html += '<input type="button" id="tkk-default" value="Standard" class="btn" style="width: 10%;' + (state === 'plus' ? ' display: none;' : '') + '" disabled/>';
             html += '<input type="button" id="tkk-save" value="Speichern" class="btn" style="width: 10%;' + (state === 'plus' ? ' display: none;' : '') + '"/>';
             html += '<input type="checkbox" id="tkk-quests" style="width: 15px; vertical-align: -2px;"' + (quests ? ' checked' : '') + '/>Quests ';
-            html += '<input type="button" id="tkk-start" value="Starten" class="btn" style="width: 10%;"' + (disable ? ' disabled' : '') + '/></td></tr></table></div>';
+            html += '<input type="button" id="tkk-start" value="Starten" class="btn" style="width: 10%;"' + (disable ? ' disabled' : '') + '/>';
+            html += '</td></tr></table></div>';
 
             $('td#content_value table:first').after(html);
+
+            tkkSetStartButtonUi();
+
+            // Ensure UI elements exist after render
+            tkkEnsureFarmLockUi();
+            tkkEnsurePopUi();
+            tkkUpdatePopUi();
+
             adjust(true);
             return display;
           })();
 
           let update = setInterval(() => {
-            check() ? ($('div#tkk-queue').length ? adjust(false) : display()) : clearInterval(update);
+            if (!check()) return clearInterval(update);
+            $('div#tkk-queue').length ? adjust(false) : display();
+
+            // Keep UI alive and up-to-date
+            tkkEnsureFarmLockUi();
+            tkkEnsurePopUi();
+            tkkUpdatePopUi();
           }, 1000);
 
-          $('body').on('click', 'img#tkk-toggle', function (event) {
+          // ==== UI Events ====
+          $('body').on('change', '#tkk-farmforce', function () {
+            tkkFarmLockEnabled = !!$(this).prop('checked');
+            GM_setValue(tkkFarmLockEnabledKey, tkkFarmLockEnabled);
+            tkkUpdatePopUi();
+          });
+
+          $('body').on('change keyup', '#tkk-farmthreshold', function () {
+            let v = parseFloat($(this).val());
+            if (!isFinite(v)) v = 10;
+            v = Math.max(1, Math.min(99, v));
+            tkkFarmLockThresholdPct = v;
+            GM_setValue(tkkFarmLockThresholdKey, v);
+            tkkUpdatePopUi();
+          });
+
+          $('body').on('click', 'img#tkk-toggle', function () {
             if ($(this).attr('src').match('minus')) {
               state = 'plus';
               $(this).attr('src', 'graphic/plus.png');
@@ -242,7 +512,7 @@
             adjust(true);
           });
 
-          $('body').on('dblclick', 'td[id^="tkk-drag"]', function (event) {
+          $('body').on('dblclick', 'td[id^="tkk-drag"]', function () {
             let code = $(this).data('code');
             let $last = $('td[role="tkk-element"]:has(i):last');
             let $next = $last.next('td[role="tkk-element"]');
@@ -278,26 +548,28 @@
             }
           });
 
-          $('body').on('change', '#tkk-template', function (event) {
-            selected = parseInt($(this).val());
-            queue = JSON.parse(GM_getValue('tkk.build.buildQueue.' + game.world + '.' + selected) || null) || fallback;
+          $('body').on('change', '#tkk-template', function () {
+            selected = parseInt($(this).val(), 10);
+            queue =
+              JSON.parse(GM_getValue('tkk.build.buildQueue.' + game.world + '.' + selected) || null) ||
+              fallback;
             GM_setValue('tkk.build.selectedTemplate.' + game.world + '.' + game.village.id, selected);
             display();
           });
 
-          $('body').on('click', 'input#tkk-add', function (event) {
+          $('body').on('click', 'input#tkk-add', function () {
             $('tr#tkk-separator').before('<tr role="tkk-row">' + element().repeat(columns) + '</tr>');
           });
 
-          $('body').on('click', 'input#tkk-remove', function (event) {
+          $('body').on('click', 'input#tkk-remove', function () {
             $('tr[role="tkk-row"]:last').remove();
           });
 
-          $('body').on('click', 'input#tkk-clear', function (event) {
+          $('body').on('click', 'input#tkk-clear', function () {
             $('td[role="tkk-element"]').replaceWith(element());
           });
 
-          $('body').on('click', 'input#tkk-import', function (event) {
+          $('body').on('click', 'input#tkk-import', function () {
             let file = $('input#tkk-file')[0].files[0];
             let reader = new FileReader();
             if (!file) return false;
@@ -308,22 +580,22 @@
             };
           });
 
-          $('body').on('click', 'input#tkk-safety', function (event) {
+          $('body').on('click', 'input#tkk-safety', function () {
             $('input#tkk-default').prop('disabled', !$(this).prop('checked'));
           });
 
-          $('body').on('click', 'input#tkk-default', function (event) {
+          $('body').on('click', 'input#tkk-default', function () {
             queue = fallback;
             GM_deleteValue('tkk.build.buildQueue.' + game.world + '.' + selected);
             display();
           });
 
-          $('body').on('click', 'input#tkk-quests', function (event) {
+          $('body').on('click', 'input#tkk-quests', function () {
             quests = $(this).prop('checked');
             GM_setValue('tkk.build.doQuests.' + game.world + '.' + game.player.id, quests);
           });
 
-          $('body').on('click', 'input#tkk-save', function (event) {
+          $('body').on('click', 'input#tkk-save', function () {
             let data = [];
             $('td[role="tkk-element"]').each(function () {
               let code = $(this).data('code');
@@ -334,10 +606,22 @@
             display();
           });
 
-          $('body').on('click', 'input#tkk-start', function (event) {
-            $(this).prop('disabled', true);
-            disable = true;
-            run();
+          $('body').on('click', 'input.tkk-preset', function () {
+            const preset = parseInt($(this).data('preset'), 10) || 1;
+
+            selected = preset;
+            GM_setValue('tkk.build.selectedTemplate.' + game.world + '.' + game.village.id, selected);
+
+            const presetQueue = (tkkPresetTemplates[preset] || tkkPresetTemplates[1] || []).slice();
+            queue = presetQueue;
+
+            GM_setValue('tkk.build.buildQueue.' + game.world + '.' + selected, JSON.stringify(queue));
+            display();
+          });
+
+          $('body').on('click', 'input#tkk-start', function () {
+            if (tkkRunning) tkkStop();
+            else tkkStart();
           });
 
           let quest = (id, screen) => {
@@ -346,6 +630,11 @@
           };
 
           let run = () => {
+            if (!tkkRunning) {
+              tkkSetStartButtonUi();
+              return;
+            }
+
             if (check()) {
               // use free complete
               if ($('a.btn-instant-free:visible').length) {
@@ -364,17 +653,25 @@
                 if ($popup.length) {
                   let warn = $popup.find('span.warn').length;
                   let $button = $popup.find('a.btn-confirm-yes');
-                  if (warn || !$button.length || (skip && $popup.find('a[onclick^="Quests.getQuest(1091)"]').length)) {
+                  if (
+                    warn ||
+                    !$button.length ||
+                    (skip && $popup.find('a[onclick^="Quests.getQuest(1091)"]').length)
+                  ) {
                     $button = $popup.find('a.popup_box_close');
                   }
                   $button.mousedown().click().mouseup();
-                  setTimeout(bot, 1000);
+                  setTimeout(() => {
+                    if (tkkRunning) bot();
+                  }, 1000);
                 } else {
                   let $finished = $('div[id^="quest"].finished');
                   if (skip) $finished = $finished.not('#quest_1091');
                   if ($finished.length) {
                     $finished.first().mousedown().click().mouseup();
-                    setTimeout(run, 1000);
+                    setTimeout(() => {
+                      if (tkkRunning) run();
+                    }, 1000);
                   } else {
                     if ($('div#quest_47').length) {
                       quest(47, 'mentor');
@@ -411,7 +708,6 @@
                     } else if ($('div#quest_1890').length) {
                       quest(1890, 'settings&mode=ref');
                     } else if ($('div#quest_1920').length && false) {
-                      // deactivated
                       quest(1920, 'statue');
                     } else if ($('div#quest_2020').length) {
                       quest(2020, 'place&mode=sim');
@@ -429,7 +725,46 @@
           };
 
           let bot = () => {
+            if (!tkkRunning) {
+              tkkSetStartButtonUi();
+              return;
+            }
+
+            // keep UI refreshed during run
+            tkkUpdatePopUi();
+
             let additional = game.features.Premium.active ? 4 : 1;
+
+            // If queue is full, just wait
+            if ($('tr.sortable_row').length >= additional) {
+              if (tkkRunTimer) {
+                try { clearTimeout(tkkRunTimer); } catch (e) {}
+                tkkRunTimer = null;
+              }
+              tkkRunTimer = setTimeout(() => {
+                tkkRunTimer = null;
+                if (tkkRunning) run();
+              }, rerun * 1000);
+              return;
+            }
+
+            // ===== HARD Farm Lock when free pop < threshold% (and enabled) =====
+            if (tkkIsLowPop()) {
+              // Attempt farm; if not possible yet => do NOTHING else (wait)
+              tkkFarmPriorityStep();
+
+              if (tkkRunTimer) {
+                try { clearTimeout(tkkRunTimer); } catch (e) {}
+                tkkRunTimer = null;
+              }
+              tkkRunTimer = setTimeout(() => {
+                tkkRunTimer = null;
+                if (tkkRunning) run();
+              }, rerun * 1000);
+              return;
+            }
+
+            // ===== Normal queue logic =====
             if ($('tr.sortable_row').length < additional) {
               let levels = {};
               for (let i = 0; i < queue.length; i++) {
@@ -442,67 +777,133 @@
                     $build.mousedown().click().mouseup();
                   }
                   break;
-                } else if (wait && game.village.buildings[codes[code].name] === '0' && $('table#buildings_unmet a[href$="' + codes[code].name + '"]').length) {
+                } else if (
+                  wait &&
+                  game.village.buildings[codes[code].name] === '0' &&
+                  $('table#buildings_unmet a[href$="' + codes[code].name + '"]').length
+                ) {
                   break;
                 }
                 levels[code] = level + 1;
               }
             }
-            setTimeout(run, rerun * 1000);
+
+            if (tkkRunTimer) {
+              try { clearTimeout(tkkRunTimer); } catch (e) {}
+              tkkRunTimer = null;
+            }
+            tkkRunTimer = setTimeout(() => {
+              tkkRunTimer = null;
+              if (tkkRunning) run();
+            }, rerun * 1000);
           };
 
           // ============================================================
           // PATCH: Quest-/Reward-Handling bei abgeschlossenem Bauauftrag
-          // - Queue Count via buildorder_* (laufend + wartend)
-          // - Human-visible speed (sichtbar, aber zügig)
+          // - FIX: Queue Count via buildorder_* (statt sortable_row)
+          // - DEBUG Logs
+          // - Human-visible speed (slower but still quick)
+          // - Rewards stop when warning is present in same cell (storage warning)
+          // - Clean coupling to quests checkbox
           // ============================================================
 
-          // "Menschliche" Delays (ms)
-          const TKK_UI_OPEN_DELAY_MS = 650;     // nach Öffnen/Tabwechsel
-          const TKK_QUEST_STEP_DELAY_MS = 850;  // zwischen Quest-Klick und nächstem Schritt
-          const TKK_COMPLETE_DELAY_MS = 950;    // nach "Aufgabe abschließen"
-          const TKK_CLAIM_DELAY_MS = 900;       // zwischen "Abholen"-Klicks
-          const TKK_CLOSE_DELAY_MS = 650;       // vor/nach Schließen
-          const TKK_MONITOR_INTERVAL_MS = 500;  // Monitor-Intervall
+          const TKK_DEBUG = true;
+
+          const TKK_UI_OPEN_DELAY_MS = 650;
+          const TKK_QUEST_STEP_DELAY_MS = 850;
+          const TKK_COMPLETE_DELAY_MS = 950;
+          const TKK_CLAIM_DELAY_MS = 900;
+          const TKK_CLOSE_DELAY_MS = 650;
+          const TKK_MONITOR_INTERVAL_MS = 500;
+
+          const tkkNow = () => {
+            try { return new Date().toISOString(); } catch (e) { return '' + Date(); }
+          };
+
+          const tkkLog = (...args) => {
+            if (!TKK_DEBUG) return;
+            try { console.log('[TKK][QR][' + tkkNow() + ']', ...args); } catch (e) {}
+          };
+
+          const tkkWarn = (...args) => {
+            if (!TKK_DEBUG) return;
+            try { console.warn('[TKK][QR][' + tkkNow() + ']', ...args); } catch (e) {}
+          };
+
+          const tkkErr = (...args) => {
+            if (!TKK_DEBUG) return;
+            try { console.error('[TKK][QR][' + tkkNow() + ']', ...args); } catch (e) {}
+          };
 
           let tkkLastQueueCount = null;
           let tkkQuestBusy = false;
+          let tkkLastCountsLogged = { buildorder: null, sortable: null };
 
-          const tkkWaitFor = (condFn, timeoutMs, cb, intervalMs = 200) => {
+          const tkkWaitFor = (condFn, timeoutMs, cb, intervalMs = 150, label = 'waitFor') => {
             const start = Date.now();
+            tkkLog(label, 'start', { timeoutMs, intervalMs });
             (function poll() {
               let ok = false;
-              try {
-                ok = !!condFn();
-              } catch (e) {
-                ok = false;
+              try { ok = !!condFn(); } catch (e) { tkkErr(label, 'condFn threw', e); }
+              if (ok) {
+                tkkLog(label, 'success in', (Date.now() - start) + 'ms');
+                return cb(true);
               }
-              if (ok) return cb(true);
-              if (Date.now() - start >= timeoutMs) return cb(false);
+              if (Date.now() - start >= timeoutMs) {
+                tkkWarn(label, 'timeout after', (Date.now() - start) + 'ms');
+                return cb(false);
+              }
               setTimeout(poll, intervalMs);
             })();
           };
 
-          const tkkClick = ($el) => {
-            if (!$el || !$el.length) return false;
-            $el.first().mousedown().click().mouseup();
+          const tkkClick = ($el, label = 'click') => {
+            if (!$el || !$el.length) {
+              tkkWarn(label, 'element not found');
+              return false;
+            }
+            const el = $el.first();
+            let descr = '';
+            try {
+              descr = el.prop('outerHTML');
+              if (descr && descr.length > 220) descr = descr.slice(0, 220) + '...';
+            } catch (e) {}
+            tkkLog(label, 'mousedown/click/mouseup', descr);
+            el.mousedown().click().mouseup();
             return true;
           };
 
-          // "echte" Queue-Größe zählen (laufend + wartend)
+          // FIX: "echte" Queue-Größe zählen (laufend + wartend)
           const tkkGetBuildQueueCount = () => {
-            const $scope = $('#buildqueue, table#buildqueue').length
-              ? $('#buildqueue, table#buildqueue')
-              : $(document);
-
+            const $scope = $('#buildqueue, table#buildqueue').length ? $('#buildqueue, table#buildqueue') : $(document);
             return $scope.find('tr').filter(function () {
               return /(^|\s)buildorder_/.test(this.className || '');
             }).length;
           };
 
+          const tkkDumpQuestDom = () => {
+            if (!TKK_DEBUG) return;
+            try {
+              tkkLog('DOM dump', {
+                hasNewQuest: $('#new_quest').length,
+                hasLeftbar: $('#main-tab > div.quest-popup-leftbar').length,
+                hasLeftbarUl: $('#main-tab > div.quest-popup-leftbar > ul').length,
+                leftbarLiCount: $('#main-tab > div.quest-popup-leftbar > ul > li').length,
+                finishedCount: $('#main-tab > div.quest-popup-leftbar > ul > li ul li').filter(function () {
+                  return ((this.className || '').toLowerCase().includes('finished'));
+                }).length,
+                rewardBadgeRaw: ($('#reward-system-badge').text() || '').trim(),
+                claimButtonsTotal: $('a.reward-system-claim-button').length
+              });
+            } catch (e) {
+              tkkErr('DOM dump failed', e);
+            }
+          };
+
           const tkkCloseQuestPopup = (done) => {
             setTimeout(() => {
-              tkkClick($('a.popup_box_close.tooltip-delayed:visible, a.popup_box_close:visible').first());
+              const $close = $('a.popup_box_close.tooltip-delayed:visible, a.popup_box_close:visible').first();
+              tkkClick($close, 'close quest popup');
               setTimeout(() => {
                 if (typeof done === 'function') done();
               }, TKK_CLOSE_DELAY_MS);
@@ -510,45 +911,91 @@
           };
 
           const tkkClaimRewardsIfAny = (done) => {
+            if (!tkkRunning || !quests) return done();
+
             const badgeText = ($('#reward-system-badge').text() || '');
             const badgeValue = parseInt(badgeText.replace(/[^\d]/g, ''), 10) || 0;
 
-            // Badge == 0 => direkt schließen, ohne Claim-Buttons
+            tkkLog('reward badge parsed', { badgeText: badgeText.trim(), badgeValue });
+
+            // Badge == 0 => direkt schließen
             if (badgeValue === 0) {
+              tkkLog('reward badge is 0 => closing popup without claiming');
               return tkkCloseQuestPopup(done);
             }
 
-            // reward-tab öffnen
-            tkkClick($('a.tab-link[data-tab="reward-tab"]').first());
+            const $rewardTab = $('a.tab-link[data-tab="reward-tab"]').first();
+            if ($rewardTab.length) {
+              tkkClick($rewardTab, 'open reward-tab');
+            } else {
+              tkkWarn('reward-tab link not found; continuing anyway');
+            }
 
-            // Kurz sichtbar werden lassen
             setTimeout(() => {
               tkkWaitFor(
                 () => $('#reward-system-rewards').length > 0,
-                12000,
+                10000,
                 (ok) => {
-                  if (!ok) return tkkCloseQuestPopup(done);
+                  if (!ok) {
+                    tkkWarn('reward table not found => closing');
+                    return tkkCloseQuestPopup(done);
+                  }
+
+                  const hasTdWarning = ($btn) => {
+                    try { return $btn.closest('td').find('span.warn').length > 0; } catch (e) { return false; }
+                  };
 
                   const claimNext = () => {
-                    const $btn = $('a.btn.btn-confirm-yes.reward-system-claim-button:visible:not([disabled])').first();
-                    if (!$btn.length) return tkkCloseQuestPopup(done);
+                    if (!tkkRunning || !quests) return done();
 
-                    tkkClick($btn);
+                    const $btn = $('a.btn.btn-confirm-yes.reward-system-claim-button:visible:not([disabled])').first();
+                    if (!$btn.length) {
+                      tkkLog('no more claim buttons => closing');
+                      return tkkCloseQuestPopup(done);
+                    }
+
+                    // STOP: wenn in derselben Zelle eine Warnung steht (z.B. "Zu wenig Platz im Speicher")
+                    if (hasTdWarning($btn)) {
+                      const warnText = ($btn.closest('td').find('span.warn').first().text() || '').trim();
+                      tkkWarn('warning detected in reward cell => stopping claims', { warnText });
+                      return tkkCloseQuestPopup(done);
+                    }
+
+                    const rid = $btn.data('reward-id');
+                    tkkLog('claiming reward', { rewardId: rid });
+
+                    tkkClick($btn, 'click claim button');
                     setTimeout(claimNext, TKK_CLAIM_DELAY_MS);
                   };
 
+                  tkkLog('claim buttons visible',
+                    $('a.btn.btn-confirm-yes.reward-system-claim-button:visible:not([disabled])').length
+                  );
+
                   setTimeout(claimNext, TKK_UI_OPEN_DELAY_MS);
                 },
-                200
+                200,
+                'waitFor reward-system-rewards'
               );
             }, TKK_UI_OPEN_DELAY_MS);
           };
 
           const tkkCompleteFinishedQuests = (done) => {
-            const $ul = $('#main-tab > div.quest-popup-leftbar > ul');
+            if (!tkkRunning || !quests) return done();
 
-            // Liste muss existieren und nicht leer sein
-            if (!$ul.length || !$ul.children('li').length) return done();
+            const $ul = $('#main-tab > div.quest-popup-leftbar > ul');
+            if (!$ul.length) {
+              tkkWarn('leftbar UL not found => skipping quest completion');
+              return done();
+            }
+
+            const ulLiCount = $ul.children('li').length;
+            tkkLog('leftbar UL found', { ulLiCount });
+
+            if (!ulLiCount) {
+              tkkLog('leftbar UL empty => nothing to do');
+              return done();
+            }
 
             const findFinished = () =>
               $('#main-tab > div.quest-popup-leftbar > ul > li ul li').filter(function () {
@@ -557,28 +1004,44 @@
               });
 
             const step = () => {
+              if (!tkkRunning || !quests) return done();
+
               const $finished = findFinished();
-              if (!$finished.length) return done();
+              const n = $finished.length;
+              tkkLog('finished quest entries found', n);
+
+              if (!n) return done();
 
               const $li = $finished.first();
               const $link = $li.find('a.quest-link').first();
-              if (!$link.length) return done();
 
-              tkkClick($link);
+              if (!$link.length) {
+                tkkWarn('quest-link missing inside finished li; aborting quest completion');
+                return done();
+              }
+
+              const qid = $link.data('quest-id');
+              const qline = $link.data('questline-id');
+              const txt = ($link.text() || '').trim();
+
+              tkkLog('click finished quest', { qid, qline, text: txt });
+              tkkClick($link, 'click quest-link');
 
               setTimeout(() => {
                 tkkWaitFor(
                   () => $('div.btn.btn-confirm-yes.status-btn.quest-complete-btn:visible').length > 0,
                   12000,
                   (ok) => {
-                    if (ok) {
-                      tkkClick($('div.btn.btn-confirm-yes.status-btn.quest-complete-btn:visible').first());
-                      setTimeout(step, TKK_COMPLETE_DELAY_MS);
-                    } else {
-                      setTimeout(step, TKK_QUEST_STEP_DELAY_MS);
+                    if (!ok) {
+                      tkkWarn('quest-complete-btn not found/visible after clicking quest', { qid, qline, text: txt });
+                      return setTimeout(step, TKK_QUEST_STEP_DELAY_MS);
                     }
+
+                    tkkClick($('div.btn.btn-confirm-yes.status-btn.quest-complete-btn:visible').first(), 'click quest-complete-btn');
+                    setTimeout(step, TKK_COMPLETE_DELAY_MS);
                   },
-                  200
+                  200,
+                  'waitFor quest-complete-btn'
                 );
               }, TKK_QUEST_STEP_DELAY_MS);
             };
@@ -587,66 +1050,99 @@
           };
 
           const tkkHandleQuestAfterBuild = () => {
-            if (tkkQuestBusy) return;
-            if (!check()) return;
-            if (!$('#new_quest').length) return;
+            if (!tkkRunning || !quests) return;
+
+            if (tkkQuestBusy) {
+              tkkLog('handler skipped: already busy');
+              return;
+            }
+            if (!check()) {
+              tkkWarn('handler aborted: bot-check active');
+              return;
+            }
+            if (!$('#new_quest').length) {
+              tkkWarn('#new_quest not found => cannot open quest dialog');
+              return;
+            }
 
             tkkQuestBusy = true;
+            tkkLog('handler started (after build finish)');
 
             setTimeout(() => {
-              // Popup öffnen (wenn nicht schon offen)
               if (!$('#main-tab > div.quest-popup-leftbar').length) {
-                tkkClick($('#new_quest').first());
+                tkkLog('quest popup not open -> clicking #new_quest');
+                tkkClick($('#new_quest').first(), 'click #new_quest');
+              } else {
+                tkkLog('quest popup already open');
               }
 
               tkkWaitFor(
                 () => $('#main-tab > div.quest-popup-leftbar').length > 0,
                 12000,
                 (ok) => {
+                  tkkDumpQuestDom();
+
                   if (!ok) {
+                    tkkWarn('quest leftbar did not appear => abort handler');
                     tkkQuestBusy = false;
                     return;
                   }
 
-                  // 1) finished Quests abschließen
                   tkkCompleteFinishedQuests(() => {
-                    // 2) Rewards prüfen/abholen oder direkt schließen
+                    tkkLog('finished quests processing done -> checking rewards');
                     tkkClaimRewardsIfAny(() => {
+                      tkkLog('reward processing done -> handler finished');
                       tkkQuestBusy = false;
                     });
                   });
                 },
-                200
+                200,
+                'waitFor quest leftbar'
               );
             }, TKK_UI_OPEN_DELAY_MS);
           };
 
           // Monitor: erkennt Bauabschluss über buildorder-Queue-Länge
           setInterval(() => {
-            if (!check()) return;
+            const ok = check();
+            if (!ok) return;
 
             const buildorderCount = tkkGetBuildQueueCount();
+            const sortableCount = $('tr.sortable_row').length;
+
+            if (buildorderCount !== tkkLastCountsLogged.buildorder || sortableCount !== tkkLastCountsLogged.sortable) {
+              tkkLog('counts changed', { buildorder: buildorderCount, sortable: sortableCount });
+              tkkLastCountsLogged = { buildorder: buildorderCount, sortable: sortableCount };
+            }
 
             if (tkkLastQueueCount === null) {
               tkkLastQueueCount = buildorderCount;
+              tkkLog('monitor initialized', { buildorder: buildorderCount, sortable: sortableCount });
               return;
             }
 
             // Trigger: wenn Gesamt-Queue schrumpft => Bauauftrag abgeschlossen
-            if (buildorderCount < tkkLastQueueCount) {
+            if (tkkRunning && quests && buildorderCount < tkkLastQueueCount) {
+              tkkLog('BUILD FINISH DETECTED (buildorder shrank)', { from: tkkLastQueueCount, to: buildorderCount });
               tkkHandleQuestAfterBuild();
             }
 
             tkkLastQueueCount = buildorderCount;
           }, TKK_MONITOR_INTERVAL_MS);
 
-          // ============================================================
-          // Ende PATCH
-          // ============================================================
+          tkkLog('Quest/Reward debug patch active', {
+            world: game.world,
+            playerId: game.player.id,
+            villageId: game.village.id,
+            premium: !!(game.features && game.features.Premium && game.features.Premium.active),
+            farmLock: { enabled: tkkFarmLockEnabled, thresholdPct: tkkFarmLockThresholdPct }
+          });
         });
       }
 
+      // ============================================================
       // Originaler Quest-Block (unverändert)
+      // ============================================================
       ready('div#questlog', () => {
         let quests = GM_getValue('tkk.build.doQuests.' + game.world + '.' + game.player.id) || false;
         if (quests && $('div#questlog > div.quest').length) {
