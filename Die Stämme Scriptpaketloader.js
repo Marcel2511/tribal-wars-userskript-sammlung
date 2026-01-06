@@ -18,6 +18,7 @@
 // @grant        unsafeWindow
 // @connect      raw.githubusercontent.com
 // @connect      github.com
+// @connect      gistcdn.githack.com
 // @connect      media.innogamescdn.com
 // @connect      userscripts-mirror.org
 // ==/UserScript==
